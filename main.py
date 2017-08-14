@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 import urllib
 import datetime
 import re
+import json
 
 user_agents = ['Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533+(KHTML, like Gecko) Element Browser 5.0',
                'IBM WebExplorer/v0.94, Galaxy/1.0 [en] (Mac OS X 10.5.6; U; en)',
@@ -53,7 +54,8 @@ def parsewebcontent(content, xml_format):
     return soup
 
 def getLinks(articleUrl):
-    response = getwebcontent("http://en.wikipedia.org"+ articleUrl, headers)
+    response = getwebcontent("http://en.wikipedia.org" + articleUrl, headers)
+    print("url is: " + "http://en.wikipedia.org" + articleUrl)
     if response is None:
         print("get wiki Web Site Error")
         return 0
@@ -69,7 +71,7 @@ def getHistoryIPs(pageUrl):
 # 编辑历史页面URL链接格式是：
 # http://en.wikipedia.org/w/index.php?title=Title_in_URL&action=history
     pageUrl = pageUrl.replace("/wiki/", "")
-    historyUrl = "http://en.wikipedia.org/w/index.php?title="+pageUrl+"&action=history"
+    historyUrl = "http://en.wikipedia.org/w/index.php?title=" + pageUrl + "&action=history"
     print("history url is: "+ historyUrl)
     response = getwebcontent(historyUrl, headers)
     if response is None:
@@ -88,7 +90,18 @@ def getHistoryIPs(pageUrl):
             for ipAddress in ipAddresses:
                 addressList.add(ipAddress.get_text())
                 return addressList    
-    
+            
+def getCountry(ipAddress):
+    response = getwebcontent("http://freegeoip.net/json/"+ ipAddress, headers)  
+    print("ip url is: "+ "http://freegeoip.net/json/"+ ipAddress)
+    if response is None:
+        print("get ip address Web Site Error")
+        return 0
+    else:
+        response.encoding = 'utf-8'
+        responseJson = json.loads(response.text)
+        return responseJson.get("country_code")
+        
 links = getLinks("/wiki/Python_(programming_language)")
 
 while(len(links) > 0):
@@ -96,7 +109,8 @@ while(len(links) > 0):
         print("-------------------")
         historyIPs = getHistoryIPs(link.attrs["href"])
         for historyIP in historyIPs:
-            print(historyIP)
-   
-    newLink = links[random.randint(0, len(links)-1)].attrs["href"]
-    links = getLinks(newLink)    
+            country = getCountry(historyIP)
+            if country is not None:
+                print(historyIP+" is from "+ country)
+    Link = links[random.randint(0, len(links)-1)].attrs["href"]
+    links = getLinks(newLink)
